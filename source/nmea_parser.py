@@ -80,7 +80,7 @@ class NMEAParser:
         """Extract satellite count and GPS quality from NMEA message."""
         if hasattr(msg, 'num_sats'):
             self._data.num_sats = int(msg.num_sats)
-            logger.info(f"Satellites: {msg.num_sats}")
+            #logger.info(f"Satellites: {msg.num_sats}")
         if hasattr(msg, 'gps_qual'):
             self._data.gps_quality = int(msg.gps_qual)
             logger.debug(f"GPS Quality: {msg.gps_qual}")

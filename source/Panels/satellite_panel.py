@@ -14,12 +14,9 @@ class SatellitePanel(BasePanel):
         main_layout.addWidget(self.create_title_label("Satellites"))
         main_layout.addLayout(grid_layout)
         main_layout.addStretch()
-        base_widget = QWidget()
-        base_widget.setStyleSheet(PANEL_STYLE)
-        base_widget.setContentsMargins(0, 0, 0, 0)
-        base_widget.setFixedWidth(PANEL_WIDTH)
-        base_widget.setFixedHeight(PANEL_HEIGHT)
         main_layout.setSpacing(0)
+        
+        base_widget = self.create_base_widget()
         base_widget.setLayout(main_layout)
 
         layout = QHBoxLayout()
@@ -30,6 +27,14 @@ class SatellitePanel(BasePanel):
 
         # Set fixed size for alignment
         self.setFixedSize(PANEL_WIDTH, PANEL_HEIGHT)
+
+    def create_base_widget(self) -> QWidget:
+        base_widget = QWidget()
+        base_widget.setStyleSheet(PANEL_STYLE)
+        base_widget.setContentsMargins(0, 0, 0, 0)
+        base_widget.setFixedWidth(PANEL_WIDTH)
+        base_widget.setFixedHeight(PANEL_HEIGHT)
+        return base_widget
 
     # private functions
     def create_satellite_layout(self):

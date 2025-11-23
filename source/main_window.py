@@ -17,6 +17,7 @@ from app_config import AppConfig, DEFAULT_CONFIG
 from command_formatter import MeshtasticCommandFormatter
 from gps import GT_U7GPS
 from gps_connection_manager import GPSConnectionManager
+from gps_data_controller import GPSDataController
 from gps_data_exporter import GPSDataExporter
 from gps_update_controller import GPSUpdateController
 from settings_dialog import SettingsDialog
@@ -40,6 +41,9 @@ class MainWindow(QMainWindow):
             baudrate=self.config.baudrate,
             status_callback=self._update_status_bar
         )
+
+        # Initialize data controller
+        self.data_controller = GPSDataController(self.connection_manager)
 
         # Initialize data exporter
         self.data_exporter = GPSDataExporter()
@@ -82,8 +86,7 @@ class MainWindow(QMainWindow):
     # View
     def _format_meshtastic_command(self):
         """Format Meshtastic command using current GPS data."""
-        gps = self.connection_manager.gps
-        gps_data = gps.data if gps else None
+        gps_data = self.data_controller.get_current_data()
         return self.command_formatter.format(gps_data)
 
     def _create_quick_actions_panel(self) -> QWidget:
@@ -188,10 +191,10 @@ class MainWindow(QMainWindow):
 
     def update_status_panels(self):
         """Update satellite and GPS status panels."""
-        gps = self.connection_manager.gps
-        if gps:
-            self.satellite_panel.set_num_sats(gps.num_sats)
-            self.satellite_panel.set_fix_quality(gps.gps_quality)
+        if self.data_controller.is_connected:
+            sat_info = self.data_controller.get_satellite_info()
+            self.satellite_panel.set_num_sats(sat_info['num_sats'])
+            self.satellite_panel.set_fix_quality(sat_info['gps_quality'])
             self.gps_status_panel.set_connection_status(True)
             self.gps_status_panel.update_timestamp()
         else:
@@ -199,18 +202,18 @@ class MainWindow(QMainWindow):
 
     def manual_refresh(self):
         """Manually refresh GPS data."""
-        if self.connection_manager.is_connected:
-            self.status_bar.showMessage("Refreshing GPS data...", 1000)
+        success = self.data_controller.manual_refresh(
+            status_callback=lambda msg: self.status_bar.showMessage(msg, 1000 if "Refreshing" in msg else 2000)
+        )
+        if success:
             self.update_gps_data()
-        else:
-            self.status_bar.showMessage("GPS not connected. Attempting reconnection...", 2000)
-            self.connection_manager.reconnect()
 
     def export_data(self):
         """Export current GPS data to CSV file."""
-        gps = self.connection_manager.gps
-        if not gps:
-            QMessageBox.warning(self, "Export Error", "No GPS data available to export.")
+        # Validate data availability
+        is_valid, error_msg = self.data_controller.validate_export_data()
+        if not is_valid:
+            QMessageBox.warning(self, "Export Error", error_msg)
             return
 
         # Open file dialog
@@ -227,7 +230,8 @@ class MainWindow(QMainWindow):
             return  # User cancelled
 
         # Export data
-        success, error_msg = self.data_exporter.export_to_file(gps.data, filename)
+        gps_data = self.data_controller.get_current_data()
+        success, error_msg = self.data_exporter.export_to_file(gps_data, filename)
 
         if success:
             self.status_bar.showMessage(f"GPS data exported to {os.path.basename(filename)}", 3000)
@@ -262,31 +266,38 @@ class MainWindow(QMainWindow):
             self.status_bar.showMessage("Settings saved. Reconnecting to GPS...", 2000)
 
     def update_position_panel(self):
-        gps = self.connection_manager.gps
-        if not gps:
+        if not self.data_controller.is_connected:
             return
         try:
-            self.position_panel.set_position(gps.latitude, gps.lat_dir, gps.longitude, gps.lon_dir, gps.height)
+            pos_info = self.data_controller.get_position_info()
+            self.position_panel.set_position(
+                pos_info['latitude'],
+                pos_info['lat_dir'],
+                pos_info['longitude'],
+                pos_info['lon_dir'],
+                pos_info['height']
+            )
         except Exception as e:
             self.status_bar.showMessage(f"GPS Error: {e}")
 
     # Controller
     def update_gps_data(self):
         """Update GPS data and refresh UI - called by update controller."""
-        gps = self.connection_manager.gps
-        if not gps:
+        if not self.data_controller.is_connected:
             if not self.connection_manager.is_reconnecting:
                 self.update_controller.schedule_reconnect()
             self.status_bar.showMessage("The GPS Module is not connected.")
             return
 
-        try:
-            gps.read_gps_data()
+        success = self.data_controller.update_gps_data()
+
+        if success:
             self.update_position_panel()
             self.update_status_panels()
             self.meshtastic_command_field.setText(self._format_meshtastic_command())
-            self.status_bar.showMessage(f"Number of Satellites: {gps.num_sats}")
-        except RuntimeError as e:
-            self.status_bar.showMessage(f"GPS Error: {e}")
-            self.connection_manager.disconnect()
+            sat_info = self.data_controller.get_satellite_info()
+            self.status_bar.showMessage(f"Number of Satellites: {sat_info['num_sats']}")
+        else:
+            error_msg = self.data_controller.last_error
+            self.status_bar.showMessage(error_msg)
             self.update_controller.schedule_reconnect()
