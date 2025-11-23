@@ -48,6 +48,15 @@ class GPSConnectionManager:
         """Check if currently attempting to reconnect."""
         return self._reconnecting
 
+    def inject_gps_instance(self, gps_instance: GT_U7GPS) -> None:
+        """
+        Inject GPS instance for testing.
+
+        Args:
+            gps_instance: GPS instance to inject
+        """
+        self._gps = gps_instance
+
     def connect(self) -> bool:
         """
         Attempt to connect to GPS device.

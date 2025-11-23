@@ -7,20 +7,21 @@ from PyQt5.QtWidgets import (
     QFileDialog
 )
 
-from Panels.gps_status_panel import GPSStatusPanel
 from Panels.panel_constants import (
     PANEL_STYLE, PANEL_WIDTH, PANEL_HEIGHT, TITLE_STYLE, TITLE_HEIGHT
 )
-from Panels.position_panel import PositionPanel
-from Panels.satellite_panel import SatellitePanel
+from actions import RefreshAction, ExportAction, SettingsAction
 from app_config import AppConfig, DEFAULT_CONFIG
 from command_formatter import MeshtasticCommandFormatter
 from gps import GT_U7GPS
 from gps_connection_manager import GPSConnectionManager
+from gps_controller_facade import GPSControllerFacade
 from gps_data_controller import GPSDataController
 from gps_data_exporter import GPSDataExporter
 from gps_update_controller import GPSUpdateController
-from settings_dialog import SettingsDialog
+from panel_factory import PanelFactory
+from settings_mediator import SettingsMediator
+from view_update_coordinator import ViewUpdateCoordinator
 
 
 class MainWindow(QMainWindow):
@@ -35,23 +36,15 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.config = config or DEFAULT_CONFIG
 
-        # Initialize connection manager
+        # Initialize managers and controllers
         self.connection_manager = GPSConnectionManager(
             port=self.config.gps_port,
             baudrate=self.config.baudrate,
             status_callback=self._update_status_bar
         )
-
-        # Initialize data controller
         self.data_controller = GPSDataController(self.connection_manager)
-
-        # Initialize data exporter
         self.data_exporter = GPSDataExporter()
-
-        # Initialize command formatter
         self.command_formatter = MeshtasticCommandFormatter()
-
-        # Initialize update controller
         self.update_controller = GPSUpdateController(
             update_interval_ms=self.config.gps_update_interval_ms,
             reconnect_interval_ms=self.config.gps_reconnect_interval_ms,
@@ -59,11 +52,26 @@ class MainWindow(QMainWindow):
             reconnect_callback=self.connection_manager.reconnect
         )
 
+        # Initialize mediators and coordinators
+        self.settings_mediator = SettingsMediator(
+            self.connection_manager,
+            self.update_controller
+        )
+        self.panel_factory = PanelFactory()
+
+        # Initialize GPS facade
+        self.gps_facade = GPSControllerFacade(
+            connection_manager=self.connection_manager,
+            data_controller=self.data_controller,
+            update_controller=self.update_controller,
+            settings_mediator=self.settings_mediator
+        )
+
         # Allow GPS instance injection (useful for testing)
         if gps_instance:
-            self.connection_manager._gps = gps_instance
+            self.gps_facade.inject_gps_instance(gps_instance)
         else:
-            self.connection_manager.connect()
+            self.gps_facade.connect()
 
         main_layout = self.init_view()
         self.update_controller.start()
@@ -83,11 +91,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'status_bar'):
             self.status_bar.showMessage(message)
 
-    # View
-    def _format_meshtastic_command(self):
-        """Format Meshtastic command using current GPS data."""
-        gps_data = self.data_controller.get_current_data()
-        return self.command_formatter.format(gps_data)
+    # View helpers
+    def _status_message(self, message: str, duration: int = 2000):
+        """Helper to show status bar message."""
+        self.status_bar.showMessage(message, duration)
 
     def _create_quick_actions_panel(self) -> QWidget:
         """
@@ -136,7 +143,10 @@ class MainWindow(QMainWindow):
         self.meshtastic_command_field = QLineEdit()
         self.meshtastic_command_field.setFixedHeight(30)
         self.meshtastic_command_field.setReadOnly(True)
-        self.meshtastic_command_field.setText(self._format_meshtastic_command())
+
+        # Set command field updater in view coordinator
+        if hasattr(self, 'view_coordinator'):
+            self.view_coordinator.command_field_updater = self.meshtastic_command_field.setText
 
         copy_button = QPushButton("Copy")
         copy_button.setFixedWidth(80)
@@ -154,22 +164,27 @@ class MainWindow(QMainWindow):
         self.status_bar = QStatusBar(self)
         self.setStatusBar(self.status_bar)
 
-        # Create panels
-        self.position_panel = PositionPanel()
-        self.satellite_panel = SatellitePanel()
-        self.gps_status_panel = GPSStatusPanel()
-
         # Create Quick Actions panel
         actions_widget = self._create_quick_actions_panel()
 
-        # Create grid layout for panels (2x2)
-        panels_grid = QGridLayout()
-        panels_grid.addWidget(self.position_panel, 0, 0)
-        panels_grid.addWidget(self.satellite_panel, 0, 1)
-        panels_grid.addWidget(self.gps_status_panel, 1, 0)
-        panels_grid.addWidget(actions_widget, 1, 1)
-        panels_grid.setSpacing(5)
-        panels_grid.setColumnStretch(2, 1)
+        # Create panels using factory
+        panels_grid = self.panel_factory.create_default_layout(actions_widget)
+
+        # Get panel references
+        self.position_panel = self.panel_factory.get_panel(PanelFactory.POSITION_PANEL)
+        self.satellite_panel = self.panel_factory.get_panel(PanelFactory.SATELLITE_PANEL)
+        self.gps_status_panel = self.panel_factory.get_panel(PanelFactory.STATUS_PANEL)
+
+        # Initialize view update coordinator
+        self.view_coordinator = ViewUpdateCoordinator(
+            data_controller=self.data_controller,
+            position_panel=self.position_panel,
+            satellite_panel=self.satellite_panel,
+            status_panel=self.gps_status_panel,
+            command_formatter=self.command_formatter,
+            command_field_updater=None,  # Will be set after command field is created
+            status_callback=self._status_message
+        )
 
         # Create command section
         command_layout = self._create_command_section()
@@ -179,125 +194,60 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(panels_grid)
         main_layout.addLayout(command_layout)
 
-        self.update_position_panel()
-        self.update_status_panels()
+        # Initial update
+        self.view_coordinator.update_all()
         return main_layout
 
     def copy_command(self):
         """Copy Meshtastic command to clipboard."""
         clipboard = QtCore.QCoreApplication.instance().clipboard()
         clipboard.setText(self.meshtastic_command_field.text())
-        self.status_bar.showMessage("Command copied to clipboard!", 2000)
+        self._status_message("Command copied to clipboard!", 2000)
 
-    def update_status_panels(self):
-        """Update satellite and GPS status panels."""
-        if self.data_controller.is_connected:
-            sat_info = self.data_controller.get_satellite_info()
-            self.satellite_panel.set_num_sats(sat_info['num_sats'])
-            self.satellite_panel.set_fix_quality(sat_info['gps_quality'])
-            self.gps_status_panel.set_connection_status(True)
-            self.gps_status_panel.update_timestamp()
-        else:
-            self.gps_status_panel.set_connection_status(False)
-
+    # Action handlers
     def manual_refresh(self):
         """Manually refresh GPS data."""
-        success = self.data_controller.manual_refresh(
-            status_callback=lambda msg: self.status_bar.showMessage(msg, 1000 if "Refreshing" in msg else 2000)
+        action = RefreshAction(
+            data_controller=self.data_controller,
+            status_callback=self._status_message,
+            success_callback=self.update_gps_data
         )
-        if success:
-            self.update_gps_data()
+        action.execute()
 
     def export_data(self):
         """Export current GPS data to CSV file."""
-        # Validate data availability
-        is_valid, error_msg = self.data_controller.validate_export_data()
-        if not is_valid:
-            QMessageBox.warning(self, "Export Error", error_msg)
-            return
-
-        # Open file dialog
-        default_filename = self.data_exporter.generate_default_filename()
-        file_filter = self.data_exporter.get_file_filter()
-        filename, _ = QFileDialog.getSaveFileName(
-            self,
-            "Export GPS Data",
-            default_filename,
-            file_filter
+        action = ExportAction(
+            data_controller=self.data_controller,
+            data_exporter=self.data_exporter,
+            parent_widget=self,
+            status_callback=self._status_message
         )
-
-        if not filename:
-            return  # User cancelled
-
-        # Export data
-        gps_data = self.data_controller.get_current_data()
-        success, error_msg = self.data_exporter.export_to_file(gps_data, filename)
-
-        if success:
-            self.status_bar.showMessage(f"GPS data exported to {os.path.basename(filename)}", 3000)
-            QMessageBox.information(self, "Export Successful",
-                                    f"GPS data successfully exported to:\n{filename}")
-        else:
-            QMessageBox.critical(self, "Export Error", error_msg)
-            self.status_bar.showMessage(f"Export failed: {error_msg}", 3000)
+        action.execute()
 
     def open_settings(self):
         """Open settings dialog."""
-        dialog = SettingsDialog(
-            self,
-            current_port=self.connection_manager.port,
-            current_baudrate=self.connection_manager.baudrate,
-            update_interval=self.update_controller.update_interval,
-            reconnect_interval=self.update_controller.reconnect_interval
+        action = SettingsAction(
+            settings_mediator=self.settings_mediator,
+            parent_widget=self,
+            status_callback=self._status_message
         )
-
-        if dialog.exec_() == SettingsDialog.Accepted:
-            settings = dialog.get_settings()
-
-            # Update intervals
-            self.update_controller.set_update_interval(settings['update_interval'])
-            self.update_controller.set_reconnect_interval(settings['reconnect_interval'])
-
-            # Update connection parameters and reconnect
-            self.connection_manager.update_connection_params(
-                port=settings['port'],
-                baudrate=settings['baudrate']
-            )
-            self.status_bar.showMessage("Settings saved. Reconnecting to GPS...", 2000)
-
-    def update_position_panel(self):
-        if not self.data_controller.is_connected:
-            return
-        try:
-            pos_info = self.data_controller.get_position_info()
-            self.position_panel.set_position(
-                pos_info['latitude'],
-                pos_info['lat_dir'],
-                pos_info['longitude'],
-                pos_info['lon_dir'],
-                pos_info['height']
-            )
-        except Exception as e:
-            self.status_bar.showMessage(f"GPS Error: {e}")
+        action.execute()
 
     # Controller
     def update_gps_data(self):
         """Update GPS data and refresh UI - called by update controller."""
         if not self.data_controller.is_connected:
-            if not self.connection_manager.is_reconnecting:
+            if not self.settings_mediator.is_reconnecting():
                 self.update_controller.schedule_reconnect()
-            self.status_bar.showMessage("The GPS Module is not connected.")
+            self._status_message("The GPS Module is not connected.")
             return
 
         success = self.data_controller.update_gps_data()
 
         if success:
-            self.update_position_panel()
-            self.update_status_panels()
-            self.meshtastic_command_field.setText(self._format_meshtastic_command())
-            sat_info = self.data_controller.get_satellite_info()
-            self.status_bar.showMessage(f"Number of Satellites: {sat_info['num_sats']}")
+            # Use coordinator for all view updates
+            self.view_coordinator.update_all()
         else:
             error_msg = self.data_controller.last_error
-            self.status_bar.showMessage(error_msg)
+            self._status_message(error_msg)
             self.update_controller.schedule_reconnect()
