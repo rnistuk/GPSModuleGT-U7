@@ -1,10 +1,6 @@
-import os
-
 from PyQt5 import QtCore
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QStatusBar, QLineEdit, QMessageBox, QPushButton, QLabel,
-    QFileDialog
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QStatusBar, QLineEdit, QPushButton, QLabel
 )
 
 from Panels.panel_constants import (

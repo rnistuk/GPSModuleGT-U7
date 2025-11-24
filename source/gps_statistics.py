@@ -1,8 +1,9 @@
 """
 Statistical analysis for GPS data with rolling window support.
 """
+import logging
 from collections import deque
-from statistics import mean, median, mode, StatisticsError
+from statistics import mean, median, mode, stdev, StatisticsError
 from typing import Optional
 from gps_data import GPSData
 
@@ -30,7 +31,9 @@ class GPSStatistics:
         Args:
             gps_data: GPSData instance to add
         """
-        self._data.append(gps_data)
+        from copy import deepcopy
+        self._data.append(deepcopy(gps_data))
+        logging.info(f"appending {gps_data.latitude}")
 
     def get_mean(self) -> dict:
         """
@@ -109,3 +112,26 @@ class GPSStatistics:
             result['height'] = None
 
         return result
+
+    def get_stdev(self) -> dict:
+        """
+        Calculate the standard deviation for latitude, longitude, and height.
+
+        Returns:
+            Dictionary with standard deviation values for each field, or None if empty/insufficient data
+        """
+        if not self._data or len(self._data) < 2:
+            return {'latitude': None, 'longitude': None, 'height': None}
+
+        latitudes = [d.latitude for d in self._data]
+        longitudes = [d.longitude for d in self._data]
+        heights = [d.height for d in self._data]
+        dlat = stdev(latitudes);
+        dlon = stdev(longitudes)
+        dh = stdev(heights)
+
+        return {
+            'latitude': dlat,
+            'longitude': dlon,
+            'height': dh
+        }

@@ -1,10 +1,8 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
-
 from Panels.base_panel import BasePanel
 from source.Panels.panel_constants import (
     PANEL_WIDTH, PANEL_HEIGHT, PANEL_STYLE
 )
-
 
 class PositionPanel(BasePanel):
     def __init__(self, width : int = PANEL_WIDTH, height : int = PANEL_HEIGHT, style : str =PANEL_STYLE):
@@ -30,6 +28,7 @@ class PositionPanel(BasePanel):
 
         # Set a fixed size for alignment
         self.setFixedSize(width, height)
+
 
     # private functions
     def create_position_layout(self):
@@ -62,3 +61,4 @@ class PositionPanel(BasePanel):
         self.set_latitude(latitude, lat_dir)
         self.set_longitude(longitude, lon_dir)
         self.set_height(height)
+

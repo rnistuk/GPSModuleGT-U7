@@ -4,11 +4,13 @@ Separates controller concerns from view logic.
 """
 import logging
 from typing import Optional, Callable, Dict, Any
-
 from gps_connection_manager import GPSConnectionManager
 from gps_data import GPSData
+from gps_statistics import GPSStatistics
 
 logger = logging.getLogger(__name__)
+
+gps_stats = GPSStatistics(25)
 
 
 class GPSDataController:
@@ -82,6 +84,11 @@ class GPSDataController:
                 'lon_dir': None,
                 'height': None
             }
+
+        gps_stats.add_data(gps.data)
+
+        logger.info(f"{gps_stats.get_stdev()}")
+
         return {
             'latitude': gps.latitude,
             'longitude': gps.longitude,

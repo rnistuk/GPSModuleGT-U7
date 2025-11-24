@@ -17,7 +17,7 @@ class AppConfig:
         gps_update_interval_ms: How often to read GPS data (milliseconds)
         gps_reconnect_interval_ms: How often to attempt reconnection (milliseconds)
     """
-    gps_port: str = '/dev/cu.usbmodem2101'
+    gps_port: str = '/dev/cu.usbmodem101'
     baudrate: int = 9600
     gps_update_interval_ms: int = 100
     gps_reconnect_interval_ms: int = 5000
