@@ -48,17 +48,21 @@ class PositionPanel(BasePanel):
         return grid_layout, latitude_label, longitude_label, height_label
 
     # public functions
-    def set_latitude(self, latitude: float, lat_dir: str) -> None:
-        self._set_value_safe(self.latitude, latitude, "13.8f", "°", lat_dir)
+    def set_latitude(self, latitude: float, lat_dir: str, lat_err:float = 1.0e-6) -> None:
+        self._set_value_safe(self.latitude, latitude, lat_err, "°", lat_dir)
 
-    def set_longitude(self, longitude: float, lon_dir: str) -> None:
-        self._set_value_safe(self.longitude, longitude, "13.8f", "°", lon_dir)
+    def set_longitude(self, longitude: float, lon_dir: str, lon_err:float = 1.0e-6) -> None:
+        self._set_value_safe(self.longitude, longitude, lon_err, "°", lon_dir)
 
-    def set_height(self, height: float) -> None:
-        self._set_value_safe(self.height, height, "4.1f", " m")
+    def set_height(self, height: float, height_err:float = 0.1) -> None:
+        self._set_value_safe(self.height, height, height_err, " m")
 
     def set_position(self, latitude: float, lat_dir: str, longitude: float, lon_dir: str, height: float) -> None:
         self.set_latitude(latitude, lat_dir)
         self.set_longitude(longitude, lon_dir)
         self.set_height(height)
 
+    def set_position(self, p):
+        self.set_latitude(p['latitude'], p['lat_dir'], p['lat_err'])
+        self.set_longitude(p['longitude'], p['lon_dir'], p['lon_err'])
+        self.set_height(p['height'], p['height_err'])

@@ -74,13 +74,7 @@ class ViewUpdateCoordinator:
 
         try:
             pos_info = self.data_controller.get_position_info()
-            self.position_panel.set_position(
-                pos_info['latitude'],
-                pos_info['lat_dir'],
-                pos_info['longitude'],
-                pos_info['lon_dir'],
-                pos_info['height']
-            )
+            self.position_panel.set_position(pos_info)
         except Exception as e:
             if self.status_callback:
                 self.status_callback(f"GPS Error: {e}")
