@@ -13,56 +13,43 @@ GPSModuleGT-U7 is a PyQt5-based GUI application for reading and displaying GPS d
 - Protocol-based interfaces in `protocols.py`
 - Dependency injection for testability (see `serial_port.py`)
 
+## Setup
+
+Install dependencies:
+
+```bash
+pip install -e .           # Install project
+pip install -e ".[dev]"    # Install with dev dependencies (pytest, mypy)
+```
+
 ## Running Tests
 
 ```bash
-source .venv/bin/activate
 pytest tests/ -v
 ```
+
+## Type Checking
+
+```bash
+mypy source/ --ignore-missing-imports
+```
+
+Configuration is in `pyproject.toml`.
 
 ## Suggested Improvements
 
 ### High Priority
 
-#### 1. Add `pyproject.toml`
+#### 1. Enable Type Checking with mypy
 
-Replace `requirements.txt` with modern Python packaging:
-
-```toml
-[project]
-name = "gps-module-gt-u7"
-version = "1.0.0"
-description = "PyQt5 GPS module interface for GT-U7"
-dependencies = [
-    "PyQt5>=5.15.0",
-    "pyserial>=3.5",
-    "pynmea2>=1.18.0",
-]
-
-[project.optional-dependencies]
-dev = ["pytest>=7.0.0", "mypy"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = "test_*.py"
-
-[tool.mypy]
-python_version = "3.9"
-ignore_missing_imports = true
-```
-
-#### 2. Enable Type Checking with mypy
-
-The project has protocols defined but no type checking configured:
+The project has protocols defined and mypy configured in `pyproject.toml`. Run type checking and fix any errors:
 
 ```bash
 pip install mypy
 mypy source/ --ignore-missing-imports
 ```
 
-Fix any type errors discovered.
-
-#### 3. Fix Import Inconsistency
+#### 2. Fix Import Inconsistency
 
 In `source/nmea_parser.py:9`:
 
@@ -76,7 +63,7 @@ from gps_data import GPSData
 
 ### Medium Priority
 
-#### 4. Async GPS Polling
+#### 3. Async GPS Polling
 
 Currently `gps.py:80` uses blocking reads which can affect UI responsiveness:
 
@@ -97,7 +84,7 @@ class GPSReaderThread(QThread):
                 # read and emit signal
 ```
 
-#### 5. Clean Up GPSControllerFacade
+#### 4. Clean Up GPSControllerFacade
 
 In `source/gps_controller_facade.py`:
 
@@ -117,18 +104,9 @@ In `source/gps_controller_facade.py`:
       pass  # Remove this dead code
   ```
 
-#### 6. Add pytest to requirements.txt
-
-```
-PyQt5>=5.15.0
-pyserial>=3.5
-pynmea2>=1.18.0
-pytest>=7.0.0
-```
-
 ### Low Priority
 
-#### 7. Extract Utility Function
+#### 5. Extract Utility Function
 
 Move `format_variable_precision()` from `source/Panels/base_panel.py` to a dedicated utility module:
 
@@ -139,7 +117,7 @@ source/
     formatting.py  # format_variable_precision()
 ```
 
-#### 8. Add Module Exports
+#### 6. Add Module Exports
 
 In `source/actions/__init__.py`, define public API:
 
@@ -151,7 +129,7 @@ from .settings_action import SettingsAction
 __all__ = ['ExportAction', 'RefreshAction', 'SettingsAction']
 ```
 
-#### 9. Rename Reserved Word Parameter
+#### 7. Rename Reserved Word Parameter
 
 In `source/Panels/base_panel.py:71`:
 

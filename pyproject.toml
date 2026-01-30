@@ -1,0 +1,36 @@
+[project]
+name = "gps-module-gt-u7"
+version = "1.0.0"
+description = "PyQt5 GPS module interface for GT-U7"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.7"
+authors = [
+    {name = "Richard Nistuk"}
+]
+dependencies = [
+    "PyQt5>=5.15.0",
+    "pyserial>=3.5",
+    "pynmea2>=1.18.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "mypy",
+]
+
+[project.urls]
+Repository = "https://github.com/rnistuk/GPSModuleGT-U7"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+warn_return_any = true
+warn_unused_ignores = true
