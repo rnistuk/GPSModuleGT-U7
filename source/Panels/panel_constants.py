@@ -7,7 +7,7 @@ This ensures a consistent appearance for all panels.
 INVALID_VALUE_TEXT = "N/A"
 
 # Panel dimensions
-PANEL_WIDTH = 275
+PANEL_WIDTH = 350
 PANEL_HEIGHT = 126
 
 # Font sizes

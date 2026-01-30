@@ -10,7 +10,7 @@ from gps_statistics import GPSStatistics
 
 logger = logging.getLogger(__name__)
 
-gps_stats = GPSStatistics(25)
+gps_stats = GPSStatistics(100)
 
 
 class GPSDataController:
@@ -86,15 +86,17 @@ class GPSDataController:
             }
 
         gps_stats.add_data(gps.data)
-
-        logger.info(f"{gps_stats.get_stdev()}")
+        mean = gps_stats.get_mean()
 
         return {
-            'latitude': gps.latitude,
-            'longitude': gps.longitude,
+            'latitude': mean['latitude'],
+            'lat_err': gps_stats.get_stdev()['latitude'],
+            'longitude': mean['longitude'],
+            'lon_err': gps_stats.get_stdev()['longitude'],
             'lat_dir': gps.lat_dir,
             'lon_dir': gps.lon_dir,
-            'height': gps.height
+            'height': mean['height'],
+            'height_err': gps_stats.get_stdev()['height']
         }
 
     def update_gps_data(self) -> bool:

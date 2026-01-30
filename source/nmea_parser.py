@@ -6,7 +6,7 @@ import logging
 
 import pynmea2
 
-from source.gps_data import GPSData
+from gps_data import GPSData
 
 logger = logging.getLogger(__name__)
 
