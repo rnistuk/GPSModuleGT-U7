@@ -21,12 +21,12 @@ class AppStyle:
         window_border: CSS border style for main window
         window_background_color: RGB tuple for window background (r, g, b)
     """
-    style_name: str = 'macintosh'
+    style_name: str =  'Macintosh'
     app_name: str = "GT-U7 GPS"
     app_version: str = "1.0"
     font_family: str = "Arial"
     font_size: int = 10
-    window_border: str = "2px solid black"
+    window_border: str = "none" #"2px solid black"
     window_background_color: tuple = (255, 255, 255)  # White
 
     def get_font(self) -> QFont:
@@ -57,8 +57,7 @@ class AppStyle:
         Returns:
             CSS stylesheet string
         """
-        return f"border: {self.window_border};"
-
+        return f"QMainWindow {{ border: {self.window_border}; }}"
 
 # Default style configuration
 DEFAULT_STYLE = AppStyle()

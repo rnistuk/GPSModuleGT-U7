@@ -33,7 +33,7 @@ class GPSStatistics:
         """
         from copy import deepcopy
         self._data.append(deepcopy(gps_data))
-        logging.info(f"appending {gps_data.latitude}")
+        # logging.info(f"appending {gps_data.latitude}")
 
     def get_mean(self) -> dict:
         """

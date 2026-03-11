@@ -79,8 +79,10 @@ class GT_U7GPS:
         try:
             while self.ser.in_waiting() > 0:
                 nmea_sentence = self._read_nmea_sentence()
+                logger.info(f"other sentence {nmea_sentence}")
                 if nmea_sentence:
                     self._parser.parse_sentence(nmea_sentence)
+
         except Exception as e:
             logger.error(f"Error reading serial port: {e}")
             raise RuntimeError(f"Failed to read GPS serial port: {e}")

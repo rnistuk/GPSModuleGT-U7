@@ -4,6 +4,7 @@ Centralizes all configurable parameters.
 """
 import os
 from dataclasses import dataclass
+import serial.tools.list_ports
 
 
 @dataclass
@@ -17,10 +18,27 @@ class AppConfig:
         gps_update_interval_ms: How often to read GPS data (milliseconds)
         gps_reconnect_interval_ms: How often to attempt reconnection (milliseconds)
     """
-    gps_port: str = '/dev/cu.usbmodem101'
+    gps_port: str = ""
     baudrate: int = 9600
     gps_update_interval_ms: int = 100
     gps_reconnect_interval_ms: int = 5000
+
+    def __init__(self):
+        self.gps_port: str = self.get_GT_U7_port()
+
+    def get_GT_U7_port(self) -> str:
+        """
+        Get the serial port for GT-U7 GPS device.
+
+        Returns:
+            str: Serial port path for GT-U7 GPS device
+        """
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            if "GPS/GNSS" in port.description:
+                return port.device
+        return "/dev/cu.usbmodem2101"
+
 
     @staticmethod
     def from_environment() -> 'AppConfig':
@@ -41,6 +59,10 @@ class AppConfig:
             baudrate=int(os.environ.get('GPS_BAUDRATE', '9600')),
             gps_update_interval_ms=int(os.environ.get('GPS_UPDATE_INTERVAL_MS', '100')),
             gps_reconnect_interval_ms=int(os.environ.get('GPS_RECONNECT_INTERVAL_MS', '5000'))
+
+
+
+
         )
 
 

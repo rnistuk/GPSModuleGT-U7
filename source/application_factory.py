@@ -44,7 +44,8 @@ class ApplicationFactory:
 
     def _configure_application(self):
         """Configure application-level settings."""
-        self.app.setStyle(QStyleFactory.create(self.style.style_name))
+        #self.app.setStyle(QStyleFactory.create(self.style.style_name))
+        self.app.setStyle(QStyleFactory.create('Plastique'))
         self.app.setApplicationName(self.style.app_name)
         self.app.setApplicationVersion(self.style.app_version)
         self.app.setFont(self.style.get_font())

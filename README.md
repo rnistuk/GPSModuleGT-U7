@@ -4,6 +4,10 @@ A PyQt5-based GUI application for reading and displaying GPS data from the GT-U7
 application displays real-time position data (latitude, longitude, altitude) and generates Meshtastic CLI commands for
 easy integration.
 
+![GT-U7_app.png](images/GT-U7_app.png)
+
+![GT-U7.png](images/GT-U7.png)
+
 ## Features
 
 - Real-time GPS position tracking with latitude, longitude, and altitude

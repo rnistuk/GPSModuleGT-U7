@@ -12,10 +12,12 @@ class GPSStatusPanel(BasePanel):
     def __init__(self):
         super().__init__()
         grid_layout, self.connection_status, self.last_update = self.create_status_layout()
+
         main_layout = QVBoxLayout()
-        main_layout.addWidget(self.create_title_label("GPS Status"))
+        main_layout.addWidget(self.create_title_label("GT-U7 Status"))
         main_layout.addLayout(grid_layout)
         main_layout.addStretch()
+
         base_widget = QWidget()
         base_widget.setStyleSheet(PANEL_STYLE)
         base_widget.setContentsMargins(0, 0, 0, 0)
