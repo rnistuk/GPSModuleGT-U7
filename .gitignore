@@ -30,3 +30,6 @@ Thumbs.db
 
 # Local configuration
 .env
+
+# uv (project uses pip)
+uv.lock
